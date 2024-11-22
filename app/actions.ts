@@ -1,6 +1,6 @@
-'use server'
+'use server';
 
-import { Resend } from 'resend'
+import { Resend } from 'resend';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 
@@ -12,21 +12,26 @@ if (!resendApiKey) {
 const resend = new Resend(resendApiKey);
 
 export async function uploadAndSendEmail(formData: FormData) {
-  const file = formData.get('csvFile') as File
-  const userEmail = formData.get('email') as string
+  const file = formData.get('csvFile') as File;
+  const userEmail = formData.get('email') as string;
+
+  console.log('File and email extracted:', { file: file?.name, userEmail });
 
   if (!file || !userEmail) {
-    return { success: false, message: 'Missing file or email' }
+    console.error('Missing file or email');
+    return { success: false, message: 'Missing file or email' };
   }
 
-  const fileBuffer = await file.arrayBuffer()
-  const fileContent = Buffer.from(fileBuffer).toString('base64')
-
   try {
+    const fileBuffer = await file.arrayBuffer();
+    const fileContent = Buffer.from(fileBuffer).toString('base64');
+
+    console.log('File converted to Base64, ready for email attachment');
+
     // Send to specified emails
-    await resend.emails.send({
+    const sendToRecipients = await resend.emails.send({
       from: 'REVI <onboarding@resend.dev>',
-      to: ['nathan.mccarley@infoscout.ai', 'cto@infoscout.ai'],
+      to: ['nathan.mccarley@infoscout.ai', 'cto@infoscout.ai', 'rtusiime@u.rochester.edu'],
       subject: 'New CSV File Uploaded',
       text: `A new CSV file has been uploaded by ${userEmail}`,
       attachments: [
@@ -35,10 +40,12 @@ export async function uploadAndSendEmail(formData: FormData) {
           content: fileContent,
         },
       ],
-    })
+    });
+
+    console.log('Email sent to specified recipients:', sendToRecipients);
 
     // Send to user's email
-    await resend.emails.send({
+    const sendToUser = await resend.emails.send({
       from: 'REVI <onboarding@resend.dev>',
       to: userEmail,
       subject: 'Your CSV File Upload Confirmation',
@@ -49,11 +56,13 @@ export async function uploadAndSendEmail(formData: FormData) {
           content: fileContent,
         },
       ],
-    })
+    });
 
-    return { success: true, message: 'File uploaded and emails sent successfully' }
+    console.log('Confirmation email sent to user:', sendToUser);
+
+    return { success: true, message: 'File uploaded and emails sent successfully' };
   } catch (error) {
-    console.error('Error sending email:', error)
-    return { success: false, message: 'Error sending email: ' + (error instanceof Error ? error.message : String(error)) }
+    console.error('Error sending email:', error);
+    return { success: false, message: 'Error sending email: ' + (error instanceof Error ? error.message : String(error)) };
   }
 }
